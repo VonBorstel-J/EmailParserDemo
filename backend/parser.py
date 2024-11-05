@@ -9,7 +9,8 @@ from typing import Dict, Any, Union
 from dotenv import load_dotenv
 from cachetools import LRUCache, cachedmethod
 from functools import wraps
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type  
+from requests.exceptions import ReadTimeout, ConnectionError
 from openai import OpenAI, OpenAIError
 from logging.handlers import RotatingFileHandler
 
@@ -31,12 +32,21 @@ def performance_monitor(func):
         return result
     return wrapper
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
+
+@retry(
+    stop=stop_after_attempt(2),  # Retry up to 2 times
+    wait=wait_exponential(multiplier=1, min=5, max=20),  # Exponential backoff, starting with 5 seconds
+    retry=retry_if_exception_type((ReadTimeout, ConnectionError))  # Only retry on specific exceptions
+)
 def send_request_with_retry(session, url, payload):
     """Send request with retry logic using tenacity."""
-    response = session.post(url, json=payload, timeout=60)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = session.post(url, json=payload, timeout=200)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"Request failed: {e}")
+        raise  # Re-raise the exception for tenacity to handle
 
 @dataclass
 class ParserConfig:
@@ -224,22 +234,23 @@ class EmailParser:
                     parsed_data[current_section][key] = value
         logger.debug(f"Parsed data: {parsed_data}")
         return parsed_data
-
+    
+    
     def _validate_parsed_fields(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate parsed fields using regex patterns and flag invalid entries."""
+        """Validate parsed fields using regex patterns and flag invalid entries without stopping the process."""
         logger.debug("Validating parsed fields.")
         validated_data = {}
-
+    
         for section, fields in parsed_data.items():
             validated_data[section] = {}
             for key, value in fields.items():
                 pattern_key = f"{key}_pattern"
                 pattern = self.field_validation.get(pattern_key)
-
+    
                 if pattern and value != "N/A":
                     # Check if the value matches the expected pattern
                     if not re.match(pattern, value):
-                        # If invalid, flag it but continue without blocking parsing
+                        # Flag as invalid format but continue processing
                         logger.warning(f"Validation failed for {key}: {value}")
                         validated_data[section][key] = f"{value} (Invalid Format)"
                     else:
@@ -248,26 +259,28 @@ class EmailParser:
                 else:
                     # If no pattern or value is "N/A", assign the value as-is
                     validated_data[section][key] = value
-
-        # Detect repeated output patterns to prevent hallucinations
+    
+        # Log repeated patterns but do not raise exceptions
         if self._detect_repeated_patterns(validated_data):
             logger.warning("Repeated output patterns detected in validated data.")
-            raise ValueError("Repeated output patterns detected.")
-
+    
         logger.debug(f"Validated data: {validated_data}")
         return validated_data
-
+    
     def _detect_repeated_patterns(self, data: Dict[str, Any]) -> bool:
-        """Detect if the validated data contains repeated patterns indicating potential loops."""
+        """Log repeated patterns in the validated data instead of stopping the process."""
         logger.debug("Checking for repeated patterns in validated data.")
         seen = {}
+        has_repeats = False  # Track if any repeats were found for logging purposes
+    
         for section, fields in data.items():
             for key, value in fields.items():
                 if value in seen:
                     seen[value] += 1
                     if seen[value] > 3:  # Threshold for repetition
-                        logger.debug(f"Value '{value}' repeated {seen[value]} times.")
-                        return True
+                        has_repeats = True
+                        logger.debug(f"Value '{value}' repeated {seen[value]} times in section '{section}', field '{key}'")
                 else:
                     seen[value] = 1
-        return False
+    
+        return has_repeats
