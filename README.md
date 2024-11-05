@@ -2,7 +2,8 @@
 
 # ProductionDemo Backend
 
-![Logo](backend\static\img\tech-background.webp)
+![Logo](backend/static/img/tech-background.webp)
+
 
 ## Table of Contents
 
