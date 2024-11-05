@@ -1,15 +1,7 @@
 # KeystoneEmailParser
 
 # ProductionDemo Backend
-<style>
-.round-logo {
-    width: 200px;
-    border-radius: 50%;
-}
-</style>
-
-<img src="backend/static/img/tech-background.webp" alt="Logo" class="round-logo"/>
-
+<img src="backend/static/img/tech-background.webp" alt="Logo" width="200"/>
 
 ## Table of Contents
 
