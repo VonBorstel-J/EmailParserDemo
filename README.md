@@ -2,7 +2,7 @@
 
 # ProductionDemo Backend
 
-<img src="backend/static/img/tech-background.webp" alt="Logo" width="200"/>
+<img src="backend/static/img/tech-background.webp" alt="Logo" width="200" style="border-radius: 50%;"/>
 
 
 ## Table of Contents
