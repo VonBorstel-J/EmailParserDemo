@@ -22,9 +22,9 @@
             </div>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <main class="flex flex-col lg:flex-row gap-6">
             <!-- Input Section -->
-            <section class="input-section bg-gray-800 rounded-lg p-4">
+            <section class="input-section bg-gray-800 rounded-lg p-4 flex-1">
                 <h2 class="text-lg font-semibold mb-3 text-blue-400">Input Email</h2>
                 <div class="controls mb-4">
                     <button id="loadSample" class="btn">Load Sample</button>
@@ -33,8 +33,8 @@
                 </div>
                 <textarea 
                     id="emailContent" 
-                    class="w-full min-h-[200px] max-h-[400px] bg-gray-700 text-gray-100 p-4 rounded-lg resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-base"
-                    placeholder="Paste your email content here..."
+                    class="w-full min-h-[200px] bg-gray-700 text-gray-100 p-4 rounded-lg resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-base overflow-y-auto"
+                    placeholder="beep BOOP beep GIMMIE TXT..."
                 ></textarea>
                 <button 
                     id="parseButton" 
@@ -46,10 +46,12 @@
                     <div class="spinner mr-2"></div>
                     <span>Processing...</span>
                 </div>
+                <!-- Moved loading-bar outside for better visibility -->
+                <div class="loading-bar hidden"></div>
             </section>
 
             <!-- Output Section -->
-            <section class="results-section bg-gray-800 rounded-lg p-4">
+            <section class="results-section bg-gray-800 rounded-lg p-4 flex-grow">
                 <h2 class="text-lg font-semibold mb-3 text-blue-400">Parsed Output</h2>
                 <div id="results" class="w-full bg-gray-700 text-gray-100 p-4 rounded-lg overflow-auto font-mono text-sm whitespace-pre-wrap">
                     Parsed content will appear here...

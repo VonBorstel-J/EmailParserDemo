@@ -1,109 +1,132 @@
-import re
-import json
-import logging
-import yaml
 import os
+import yaml
+import logging
+import requests
+import re
 import time
-from typing import Dict, Any, Tuple, Union
 from dataclasses import dataclass
-from openai import OpenAI
-from logging.handlers import RotatingFileHandler
-from cachetools import LRUCache, cached
+from typing import Dict, Any, Union
+from dotenv import load_dotenv
+from cachetools import LRUCache, cached, cachedmethod
 from functools import wraps
+from tenacity import retry, stop_after_attempt, wait_fixed
+from openai import OpenAI, OpenAIError
 
-# Initialize the OpenAI client pointing to LM Studio's API
-client = OpenAI(
-    base_url="http://localhost:3000/v1",
-    api_key="lm-studio"
-)
+# Load environment variables from .env file
+load_dotenv()
 
-# Constants for model versions
-MODEL_VERSIONS = {
-    "meta-llama/Llama-3.2-1B": "1.0.0",
-    "meta-llama/Llama-3.2-3B": "1.0.0",
-    "numind/NuExtract-v1.5": "1.5.0"
-}
-
-# LRU Cache for _generate_response
-_generate_response_cache = LRUCache(maxsize=100)  # Set reasonable cache size limit
-
-class ModelNotFoundError(Exception):
-    """Raised when model files are not found"""
-    pass
-
-class ModelVersionError(Exception):
-    """Raised when model version is incompatible"""
-    pass
-
-class TransientModelError(Exception):
-    """Raised for transient model errors, suitable for retrying"""
-    pass
+# Setup basic logger
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("parser")
 
 def performance_monitor(func):
-    """Decorator to monitor performance metrics of functions"""
+    """Decorator to monitor performance metrics of functions."""
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        args[0].logger.debug(
-            f"Performance: {func.__name__} took {elapsed_time:.2f}s"
-        )
+        logger.debug(f"Performance: {func.__name__} took {elapsed_time:.2f}s")
         return result
     return wrapper
 
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
+def send_request_with_retry(session, url, payload):
+    """Send request with retry logic using tenacity."""
+    response = session.post(url, json=payload, timeout=60)
+    response.raise_for_status()
+    return response.json()
+
 @dataclass
 class ParserConfig:
-    """Configuration class for EmailParser"""
-    model_size: str
-    cache_dir: str
+    prompt_template: str
     logging_level: str
     logging_file: str
     create_logs_dir: bool
-    generation_config: Dict[str, Any]
-    prompt_template: str
     field_validation: Dict[str, str]
-    model_path: str
+    cache_dir: str
     max_tokens: int
+    lm_studio_base_url: str
+    lm_studio_api_key: str
+    generation_config: Dict[str, Any]
 
 class EmailParser:
-    def __init__(self, 
-                 model_size: str = 'meta-llama/Llama-3.2-1B', 
-                 config_path: str = 'parser.config.yaml',
-                 device: str = None) -> None:
-        """
-        Initialize the EmailParser with improved error handling and validation.
-        """
-        # Initialize basic logging before configuration is loaded
-        logging.basicConfig(level=logging.DEBUG)
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, config_path: str = 'parser.config.yaml') -> None:
+        """Initialize the EmailParser."""
+        self.config = self._load_config(config_path)
+        self._configure_logging()
+        self.field_validation = self.config.field_validation
+        self.lm_studio_url = self.config.lm_studio_base_url
+        self.lm_studio_api_key = self.config.lm_studio_api_key
+        self.generation_config = self.config.generation_config
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": f"Bearer {self.lm_studio_api_key}",
+            "Content-Type": "application/json"
+        })
+        self.cache = LRUCache(maxsize=500)  # Adjust maxsize as needed
 
-        # Stage 1: Load and validate configuration
-        self.logger.info("Stage 1: Loading and validating configuration...")
+        # Initialize OpenAI client pointing to LM Studio's API
+        self.client = OpenAI(
+            base_url=f"{self.lm_studio_url}/v1",
+            api_key=self.lm_studio_api_key
+        )
+
+    def _load_config(self, config_path: str) -> ParserConfig:
+        """Load and validate the YAML configuration file."""
+        logger.debug(f"Loading configuration from {config_path}")
+        if not os.path.exists(config_path):
+            logger.critical(f"Configuration file not found: {config_path}")
+            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+    
         try:
-            self.config = self._load_and_validate_config(config_path, model_size)
-            self._configure_logging()
-            self.logger.info("Configuration loaded and logging configured.")
-        except Exception as e:
-            self.logger.critical(f"Failed at Stage 1: {str(e)}", exc_info=True)
+            with open(config_path, 'r') as file:
+                config_data = yaml.safe_load(file)
+    
+            # Validate required fields, excluding 'generation_config'
+            required_fields = ['prompt_template', 'logging', 'field_validation', 'lm_studio']
+            for field in required_fields:
+                if field not in config_data:
+                    logger.critical(f"Missing required configuration field: {field}")
+                    raise KeyError(f"Missing required configuration field: {field}")
+    
+            prompt_template = config_data['prompt_template']
+            logging_config = config_data['logging']
+            field_validation = config_data['field_validation']
+            lm_studio_config = config_data['lm_studio']
+            
+            # Use an empty dictionary as the default for generation_config if not present
+            generation_config = config_data.get('generation_config', {})
+    
+            return ParserConfig(
+                prompt_template=prompt_template,
+                logging_level=logging_config.get('level', 'DEBUG'),
+                logging_file=logging_config.get('file_path', 'logs/parser.log'),
+                create_logs_dir=logging_config.get('create_logs_dir_if_not_exists', True),
+                field_validation=field_validation,
+                cache_dir=config_data.get('cache_dir', './cache'),
+                max_tokens=config_data.get('max_tokens', 1024),
+                lm_studio_base_url=lm_studio_config['base_url'],
+                lm_studio_api_key=lm_studio_config['api_key'],
+                generation_config=generation_config  # Optional field
+            )
+    
+        except yaml.YAMLError as e:
+            logger.critical(f"Error parsing configuration file: {e}")
             raise
 
-        # Field validation patterns
-        self.phone_pattern = re.compile(self.config.field_validation.get('phone_pattern', ''))
-        self.email_pattern = re.compile(self.config.field_validation.get('email_pattern', ''))
-        self.date_pattern = re.compile(self.config.field_validation.get('date_pattern', ''))
-
     def _configure_logging(self) -> None:
-        """Configure logging with rotation and proper formatting"""
+        """Configure logging with rotation and proper formatting."""
         if self.config.create_logs_dir:
             os.makedirs(os.path.dirname(self.config.logging_file), exist_ok=True)
-            self.logger.debug("Logs directory created.")
+            logger.debug("Logs directory created.")
 
         # Clear existing handlers
-        self.logger.handlers.clear()
+        if logger.hasHandlers():
+            logger.handlers.clear()
 
-        # Configure file handler with rotation
-        file_handler = RotatingFileHandler(
+        # File handler with rotation
+        file_handler = logging.handlers.RotatingFileHandler(
             self.config.logging_file,
             maxBytes=10*1024*1024,  # 10MB
             backupCount=5
@@ -111,190 +134,112 @@ class EmailParser:
         file_handler.setFormatter(
             logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
         )
-        self.logger.addHandler(file_handler)
+        logger.addHandler(file_handler)
 
-        # Configure console handler
+        # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(
             logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
         )
-        self.logger.addHandler(console_handler)
+        logger.addHandler(console_handler)
 
         # Set logging level
-        self.logger.setLevel(getattr(logging, self.config.logging_level.upper(), logging.DEBUG))
-        self.logger.debug(f"Logging configured with level: {self.config.logging_level.upper()}")
+        logger.setLevel(getattr(logging, self.config.logging_level.upper(), logging.DEBUG))
+        logger.debug(f"Logging configured with level: {self.config.logging_level.upper()}")
 
-    def _load_and_validate_config(self, config_path: str, model_size: str) -> ParserConfig:
-        """
-        Load and validate configuration from YAML file.
-        """
-        self.logger.debug(f"Loading configuration from {config_path}")
-        if not os.path.exists(config_path):
-            raise ValueError(f"Configuration file not found: {config_path}")
-
+    def check_lm_studio_connection(self) -> bool:
+        """Check if LM Studio is available."""
+        url = f"{self.lm_studio_url}/v1/models"
         try:
-            with open(config_path, 'r') as file:
-                config_data = yaml.safe_load(file)
-
-            # Extract model-specific configuration based on model size
-            model_key = ('llama_1b' if '1B' in model_size else
-                         'llama_3b' if '3B' in model_size else
-                         'nuextract' if 'NuExtract' in model_size else
-                         None)
-            model_config = config_data.get('models', {}).get(model_key, {})
-
-            if not model_config:
-                raise ValueError(f"Configuration for {model_key} not found")
-
-            self.logger.debug(f"Configuration for {model_key} loaded.")
-
-            return ParserConfig(
-                model_size=model_config.get('repo_id'),
-                cache_dir=config_data.get('cache_dir', './models'),
-                logging_level=config_data.get('logging', {}).get('level', 'DEBUG'),
-                logging_file=config_data.get('logging', {}).get('file_path', 'logs/parser.log'),
-                create_logs_dir=config_data.get('logging', {}).get('create_logs_dir_if_not_exists', True),
-                generation_config=model_config.get('generation_config', {}),
-                prompt_template=model_config.get('prompt_template', ''),
-                field_validation=config_data.get('field_validation', {}),
-                model_path=os.path.abspath(model_config.get('model_path', './models')),
-                max_tokens=model_config.get('max_tokens', 1024)
-            )
-
-        except yaml.YAMLError as e:
-            raise ValueError(f"Error parsing configuration file: {str(e)}")
-        except Exception as e:
-            raise ValueError(f"Unexpected error loading configuration: {str(e)}")
+            response = self.session.get(url, timeout=10)
+            if response.ok:
+                logger.info("Successfully connected to LM Studio.")
+                return True
+            else:
+                logger.error(f"LM Studio connection failed with status code {response.status_code}.")
+                return False
+        except requests.RequestException as e:
+            logger.error(f"Failed to connect to LM Studio: {e}")
+            return False
 
     @performance_monitor
-    def parse_email(self, email_text: str, chat_mode: bool = False) -> Union[Dict[str, Any], str]:
-        self.logger.info("Starting email parsing...")
+    @cachedmethod(lambda self: self.cache, key=lambda self, email_content, chat_mode=False: email_content)
+    def parse_email(self, email_content: str, chat_mode: bool = False) -> Union[Dict[str, Any], str]:
+        """Parse email content using LM Studio with caching and performance monitoring."""
+        if not self.check_lm_studio_connection():
+            logger.error("LM Studio is unavailable or not running.")
+            return "LM Studio is unavailable or not running. Please check your server."
 
-        # Stage 5: Construct prompt
-        self.logger.info("Constructing prompt...")
-        prompt = (
-            "You are an AI assistant that provides helpful and informative responses.\n"
-            f"User: {email_text}\n"
-            "Assistant:"
-        ) if chat_mode else self.config.prompt_template.replace('{{email_content}}', email_text)
+        prompt = self.config.prompt_template.replace('{{email_content}}', email_content)
+        payload = {
+            "prompt": prompt,
+            "max_tokens": self.config.max_tokens,
+            **self.generation_config
+        }
 
-        self.logger.debug(f"Constructed prompt: {prompt[:500]}...")
-
-        # Generate model response
-        self.logger.info("Generating response...")
         try:
-            response = self._generate_response(prompt, chat_mode)
-            self.logger.debug(f"Model response: {response[:500]}...")
+            # Send request with retry logic
+            result = send_request_with_retry(self.session, f"{self.lm_studio_url}/v1/completions", payload)
+            completion = result.get('choices', [{}])[0].get('text', '').strip()
+            if not completion:
+                logger.warning("Empty completion received from LM Studio.")
+                return "No valid completion generated."
 
-            if chat_mode:
-                assistant_reply = response.split('Assistant:')[-1].strip()
-                self.logger.info("Chat mode response parsed successfully.")
-                return assistant_reply
-            else:
-                parsed_data = self._parse_response(response)
-                self.logger.info("Email parsed successfully.")
-                return parsed_data
+            # Clean and parse the response
+            parsed_data = self._parse_response(completion)
+            validated_data = self._validate_parsed_fields(parsed_data)
+            return validated_data
 
         except Exception as e:
-            self.logger.error(f"Error generating response: {str(e)}", exc_info=True)
-            raise
+            logger.error(f"Error during parsing: {e}", exc_info=True)
+            return f"Internal error during parsing: {e}"
 
     def _parse_response(self, response: str) -> Dict[str, Any]:
-        """Parse the model's response to extract the sections and fields."""
-        self.logger.debug(f"Raw response to parse: {response}")
+        """Parse the LM Studio response to extract fields."""
+        logger.debug("Parsing LM Studio response.")
         parsed_data = {}
         current_section = None
 
-        try:
-            lines = response.split('\n')
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                
-                # Check for section headers, now properly handling ** markers
-                if line.startswith('**') and line.endswith('**'):
-                    section_name = line.strip('*').strip()
-                    # Convert section name to snake_case without any extra characters
-                    current_section = section_name.lower().replace(' ', '_').replace(':', '')
-                    parsed_data[current_section] = {}
-                    continue
-                
-                # Parse key-value pairs
-                if line.startswith('-') and current_section:
-                    parts = [p.strip() for p in line[1:].split(':', 1)]
-                    if len(parts) == 2:
-                        # Clean up the key name
-                        key = parts[0].lower().replace(' ', '_').replace('(', '').replace(')', '')
-                        value = parts[1].strip()
-                        parsed_data[current_section][key] = value
+        for line in response.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('**') and line.endswith('**'):
+                section_name = line.strip('*').strip().lower().replace(' ', '_')
+                parsed_data[section_name] = {}
+                current_section = section_name
+            elif line.startswith('-') and current_section:
+                parts = line[1:].split(':', 1)
+                if len(parts) == 2:
+                    key = parts[0].strip().lower().replace(' ', '_').replace('(', '').replace(')', '')
+                    value = parts[1].strip()
+                    parsed_data[current_section][key] = value
+        logger.debug(f"Parsed data: {parsed_data}")
+        return parsed_data
 
-            return parsed_data
-        except Exception as e:
-            self.logger.error(f"Error parsing response: {e}", exc_info=True)
-            return {}
+    def _validate_parsed_fields(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate parsed fields using regex patterns and flag invalid entries."""
+        logger.debug("Validating parsed fields.")
+        validated_data = {}
 
-    def _validate_response(self, field: str, response: str) -> str:
-        """
-        Validate the response based on the field type.
-        """
-        response = response.strip()
-        if not response or response == "{{" + field + "}}":
-            return "N/A"
+        for section, fields in parsed_data.items():
+            validated_data[section] = {}
+            for key, value in fields.items():
+                pattern_key = f"{key}_pattern"
+                pattern = self.field_validation.get(pattern_key)
 
-        if 'phone' in field:
-            if not self.phone_pattern.match(response):
-                self.logger.warning(f"Invalid phone number format: {response}")
-                return "Invalid phone number"
-        elif 'email' in field:
-            if not self.email_pattern.match(response):
-                self.logger.warning(f"Invalid email format: {response}")
-                return "Invalid email address"
-        elif 'date' in field:
-            if not self.date_pattern.match(response):
-                self.logger.warning(f"Invalid date format: {response}")
-                return "Invalid date"
+                if pattern and value != "N/A":
+                    # Check if the value matches the expected pattern
+                    if not re.match(pattern, value):
+                        # If invalid, flag it but continue without blocking parsing
+                        logger.warning(f"Validation failed for {key}: {value}")
+                        validated_data[section][key] = f"{value} (Invalid Format)"
+                    else:
+                        # If valid, assign the value as-is
+                        validated_data[section][key] = value
+                else:
+                    # If no pattern or value is "N/A", assign the value as-is
+                    validated_data[section][key] = value
 
-        return response
-
-    @cached(_generate_response_cache)
-    @performance_monitor
-    def _generate_response(self, prompt: str, chat_mode: bool = False) -> str:
-        """
-        Generate response using the OpenAI API, with detailed error handling.
-        """
-        self.logger.debug(f"Generating response for model: {self.config.model_size}")
-        try:
-            if chat_mode:
-                # Use Chat Completion API
-                completion = client.chat.completions.create(
-                    model=self.config.model_size,
-                    messages=[
-                        {"role": "system", "content": "You are an AI assistant that helps parse email content."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    **self.config.generation_config,
-                    stream=True
-                )
-                
-                response_content = ""
-                for chunk in completion:
-                    if chunk.choices[0].delta.content:
-                        response_content += chunk.choices[0].delta.content
-                return response_content.strip()
-            
-            else:
-                # Use Completion API for regular mode
-                completion = client.completions.create(
-                    model=self.config.model_size,
-                    prompt=prompt,
-                    **self.config.generation_config
-                )
-                return completion.choices[0].text.strip()
-    
-        except OpenAIError as e:
-            self.logger.error(f"OpenAI API error: {e}")
-            raise
-        except Exception as e:
-            self.logger.error(f"Unexpected error in _generate_response: {e}", exc_info=True)
-            raise
+        logger.debug(f"Validated data: {validated_data}")
+        return validated_data

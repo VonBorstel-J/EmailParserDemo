@@ -50,6 +50,7 @@ const Elements = {
     get charCount() { return document.getElementById('charCount'); },
     get parseButton() { return document.getElementById('parseButton'); },
     get progress() { return document.getElementById('progressIndicator'); },
+    get loadingBar() { return document.querySelector('.loading-bar'); },
     get results() { return document.getElementById('results'); },
     get lmStatus() { return document.getElementById('lmStatus'); }
 };
@@ -64,7 +65,7 @@ function initializeApp() {
     updateCharCount();
     checkLMStudioStatus();
     startStatusCheckInterval();
-    
+
     // Initialize buttons
     const loadSampleBtn = document.getElementById('loadSample');
     const clearBtn = document.getElementById('clearBtn');
@@ -95,15 +96,12 @@ function initializeApp() {
 
     // Initialize parallax
     initParallax();
-    
-    // Add loading bar to progress indicator
-    const progressIndicator = document.getElementById('progressIndicator');
-    if (progressIndicator && !progressIndicator.querySelector('.loading-bar')) {
-        const loadingBar = document.createElement('div');
-        loadingBar.className = 'loading-bar';
-        progressIndicator.appendChild(loadingBar);
+
+    // Ensure loading-bar is hidden initially
+    if (Elements.loadingBar) {
+        Elements.loadingBar.classList.add('hidden');
     }
-    
+
     // Add hover glow effect to buttons
     const buttons = document.querySelectorAll('.btn');
     buttons.forEach(button => {
@@ -116,10 +114,6 @@ function initializeApp() {
         });
     });
 }
-
-// Remove the old DOMContentLoaded listener and add a new one
-document.removeEventListener('DOMContentLoaded', initializeApp);
-document.addEventListener('DOMContentLoaded', initializeApp);
 
 // LM Studio Status Management
 function startStatusCheckInterval() {
@@ -149,7 +143,7 @@ function updateStatusUI(status) {
         'connected': { text: 'Connected', class: 'connected' },
         'error': { text: 'Disconnected', class: 'error' }
     };
-    
+
     const { text, class: className } = statusMap[status];
     Elements.lmStatus.textContent = text;
     Elements.lmStatus.className = `status-badge ${className}`;
@@ -158,14 +152,14 @@ function updateStatusUI(status) {
 // Content Management
 function updateCharCount() {
     if (!Elements.content || !Elements.charCount) return;
-    
+
     const count = Elements.content.value.length;
     Elements.charCount.textContent = `${count.toLocaleString()} characters`;
 }
 
 function clearContent() {
     if (!Elements.content) return;
-    
+
     Elements.content.value = '';
     clearResults();
     updateCharCount();
@@ -173,7 +167,7 @@ function clearContent() {
 
 function loadSample() {
     if (!Elements.content) return;
-    
+
     Elements.content.value = CONFIG.SAMPLE_EMAIL;
     updateCharCount();
 }
@@ -183,7 +177,7 @@ async function parseEmail() {
     if (!validateInput()) return;
 
     setParsingState(true);
-    
+
     try {
         const response = await fetchParseResults();
         handleParseResponse(response);
@@ -210,7 +204,8 @@ async function fetchParseResults() {
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
     return response.json();
@@ -219,6 +214,8 @@ async function fetchParseResults() {
 function handleParseResponse(data) {
     if (data.result) {
         showResults(data.result);
+    } else if (data.error) {
+        showError(data.error);
     } else {
         showError("No valid results returned from parser.");
     }
@@ -226,7 +223,7 @@ function handleParseResponse(data) {
 
 function handleParseError(error) {
     console.error('Parsing error:', error);
-    showError(`Error parsing email: ${error.message}`);
+    showError(`Error parsing email: ${sanitizeHTML(error.message)}`);
 }
 
 function setParsingState(isParsing) {
@@ -235,6 +232,9 @@ function setParsingState(isParsing) {
     }
     if (Elements.progress) {
         Elements.progress.classList.toggle('hidden', !isParsing);
+    }
+    if (Elements.loadingBar) {
+        Elements.loadingBar.classList.toggle('hidden', !isParsing);
     }
     if (!isParsing) {
         updateCharCount();
@@ -262,66 +262,51 @@ function showResults(result) {
     if (!Elements.results) return;
 
     try {
-        const sections = parseResultSections(result);
-        renderResults(sections);
+        const html = renderParsedData(result);
+        Elements.results.innerHTML = html;
     } catch (error) {
         console.error('Error displaying results:', error);
-        showError(`Error displaying results: ${error.message}`);
+        showError(`Error displaying results: ${sanitizeHTML(error.message)}`);
     }
 }
 
-function parseResultSections(result) {
-    return result
-        .split('**')
-        .filter(section => section.trim())
-        .map(section => section.trim());
+function renderParsedData(parsedData) {
+    let html = '<div class="results-container">';
+    for (const section in parsedData) {
+        if (parsedData.hasOwnProperty(section)) {
+            html += `
+                <div class="result-section">
+                    <h3>${sanitizeHTML(formatSectionName(section))}</h3>
+                    <div class="result-content">
+                        ${renderSectionContent(parsedData[section])}
+                    </div>
+                </div>
+            `;
+        }
+    }
+    html += '</div>';
+    return html;
 }
 
-function renderResults(sections) {
-    const html = `
-        <div class="results-container">
-            ${sections.map(renderSection).join('')}
-        </div>
-    `;
-    
-    Elements.results.innerHTML = html;
+function formatSectionName(section) {
+    return section.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-function renderSection(section) {
-    const lines = section.split('\n').filter(line => line.trim());
-    const title = lines[0]; // Use the first line as the section title
-
-    return `
-        <div class="result-section">
-            <h3>${sanitizeHTML(title)}</h3>
-            <div class="result-content">
-                ${renderSectionContent(lines.slice(1))}
-            </div>
-        </div>
-    `;
-}
-
-function renderSectionContent(contentLines) {
-    return contentLines
-        .map(line => {
-            if (line.includes(':')) {
-                return renderKeyValueLine(line);
-            }
-            return `<div class="result-line">${sanitizeHTML(line)}</div>`;
-        })
-        .join('');
-}
-
-function renderKeyValueLine(line) {
-    const [key, ...valueParts] = line.split(':');
-    const value = valueParts.join(':').trim() || 'N/A';
-
-    return `
-        <div class="result-row flex">
-            <span class="result-key">${sanitizeHTML(key.trim())}:</span>
-            <span class="result-value">${sanitizeHTML(value)}</span>
-        </div>
-    `;
+function renderSectionContent(fields) {
+    let content = '';
+    for (const key in fields) {
+        if (fields.hasOwnProperty(key)) {
+            const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const value = fields[key];
+            content += `
+                <div class="result-row flex">
+                    <span class="result-key font-semibold">${sanitizeHTML(displayKey)}:</span>
+                    <span class="result-value ml-2">${sanitizeHTML(value)}</span>
+                </div>
+            `;
+        }
+    }
+    return content;
 }
 
 // Security: Sanitize HTML content
@@ -344,24 +329,16 @@ function debounce(func, wait) {
     };
 }
 
-// Performance Monitoring (Optional)
-const PerformanceMonitor = {
-    timers: {},
-    
-    start(label) {
-        this.timers[label] = performance.now();
-    },
-    
-    end(label) {
-        if (this.timers[label]) {
-            const duration = performance.now() - this.timers[label];
-            console.debug(`${label} took ${duration.toFixed(2)}ms`);
-            delete this.timers[label];
-            return duration;
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
         }
-        return null;
-    }
-};
+    };
+}
 
 // Parallax Effect
 function initParallax() {
@@ -372,20 +349,20 @@ function initParallax() {
     for (let i = 0; i < 100; i++) {
         const star = document.createElement('div');
         star.className = 'star';
-        
+
         // Random position
         star.style.left = `${Math.random() * 100}%`;
         star.style.top = `${Math.random() * 100}%`;
-        
+
         // Random size
         const size = Math.random() * 3;
         star.style.width = `${size}px`;
         star.style.height = `${size}px`;
-        
+
         // Random animation duration and delay
         star.style.setProperty('--duration', `${2 + Math.random() * 3}s`);
         star.style.setProperty('--delay', `${Math.random() * 2}s`);
-        
+
         starsContainer.appendChild(star);
     }
 
@@ -399,16 +376,4 @@ function initParallax() {
     }, 1000 / 60); // 60fps
 
     document.addEventListener('mousemove', throttledMouseMove);
-}
-
-// Throttle function for performance
-function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
 }

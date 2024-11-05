@@ -84,6 +84,10 @@ body {
     background: rgba(30, 41, 59, 0.7);
     border: 1px solid rgba(59, 130, 246, 0.2);
     box-shadow: var(--shadow-md);
+    max-height: 90vh; /* Ensures container fits within viewport */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /* Header with glow effect */
@@ -180,11 +184,12 @@ h1:hover {
     transition: all 0.3s ease;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
     backdrop-filter: blur(5px);
-    min-height: 200px; /* Changed from fixed height */
-    max-height: 400px; /* Added max-height */
+    min-height: 200px; /* Ensured from HTML */
+    /* Removed max-height to allow full expansion */
     resize: vertical; /* Allow vertical resizing */
     padding: 1rem; /* Increased padding for better readability */
     font-size: 1rem; /* Increased font size */
+    overflow-y: auto; /* Added for smooth scrolling */
 }
 
 #emailContent:focus {
@@ -224,11 +229,11 @@ h1:hover {
     overflow: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--primary-color) var(--dark-surface);
-    min-height: 200px; /* Changed from fixed height */
-    max-height: 400px; /* Added max-height */
+    min-height: 200px; /* Ensured from HTML */
     padding: 1rem; /* Reduced padding */
     font-size: 0.95rem; /* Slightly increased font size for readability */
     line-height: 1.4; /* Optimized line height */
+    box-shadow: var(--shadow-glow); /* Added soft shadow */
 }
 
 #results::-webkit-scrollbar {
@@ -254,9 +259,11 @@ h1:hover {
     position: absolute;
     top: 0;
     left: 0;
-    height: 2px;
+    height: 4px; /* Increased height for better visibility */
     background: var(--primary-color);
     animation: loadingProgress 2s ease-in-out infinite;
+    width: 100%;
+    z-index: 3; /* Ensure it overlays above other elements */
 }
 
 @keyframes loadingProgress {
@@ -303,15 +310,14 @@ h1:hover {
     background-color: var(--dark-bg) !important;
 }
 
-/* Grid container adjustments */
-.grid {
-    display: grid;
-    gap: 1.5rem;
-}
-
+/* Responsive Flex Layout */
 @media (min-width: 1024px) {
-    .lg\:grid-cols-2 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    main {
+        display: flex;
+        gap: 1.5rem;
+    }
+    .input-section, .results-section {
+        flex: 1;
     }
 }
 
@@ -339,16 +345,16 @@ h1:hover {
 
 .result-section {
     background-color: var(--dark-surface);
-    padding: 0.5rem; /* Reduced from 0.75rem */
-    margin-bottom: 0.25rem; /* Reduced from 0.5rem */
+    padding: 0.75rem; /* Increased padding for better separation */
+    margin-bottom: 0.5rem; /* Increased margin for better separation */
     border-radius: var(--border-radius);
     border-left: 3px solid var(--primary-color); /* Slightly thinner border */
 }
 
 .result-section h3 {
     position: relative;
-    padding-left: 0.5rem; /* Reduced from 0.75rem */
-    margin-bottom: 0.25rem; /* Reduced from 0.5rem */
+    padding-left: 0.75rem; /* Increased padding */
+    margin-bottom: 0.25rem; /* Maintained margin */
     font-size: var(--font-size-medium); /* Ensures consistent sizing */
 }
 
@@ -365,11 +371,11 @@ h1:hover {
 }
 
 .result-content {
-    padding-left: 0.5rem; /* Consistent padding */
+    padding-left: 0.75rem; /* Increased padding for better separation */
 }
 
 .result-row {
-    margin-bottom: 0.15rem; /* Reduced from 0.25rem */
+    margin-bottom: 0.25rem; /* Increased for better readability */
     display: flex;
     align-items: baseline;
     font-size: var(--font-size-small); /* Slightly smaller font */
@@ -391,7 +397,7 @@ h1:hover {
 .results-section {
     padding: 0.75rem; /* Reduced padding from 1rem */
     height: auto; /* Allow height to adjust based on content */
-    max-height: 600px; /* Optional: Set a max-height with scroll */
+    max-height: 600px; /* Set a max-height with scroll */
     overflow: auto;
 }
 
@@ -424,4 +430,13 @@ h1:hover {
 /* Hide progress indicator by default */
 .progress.hidden {
     display: none;
+}
+
+/* Show loading-bar when active */
+.loading-bar.hidden {
+    display: none;
+}
+
+.loading-bar:not(.hidden) {
+    display: block;
 }
