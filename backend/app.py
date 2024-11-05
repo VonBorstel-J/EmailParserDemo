@@ -2,12 +2,15 @@ import os
 import logging
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+from logging.handlers import RotatingFileHandler
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from parser import EmailParser
 from functools import wraps
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from exporter import export_to_pdf, export_to_csv
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,12 +36,11 @@ CORS(app, resources={
     }
 })
 
-# Initialize Limiter for rate limiting
-limiter = Limiter(
-    app,
-    key_func=get_remote_address,
-    default_limits=["100 per hour"]  # Adjust limits as needed
-)
+# Initialize Limiter with key_func and default_limits
+limiter = Limiter(key_func=get_remote_address, default_limits=["100 per hour"])
+
+# Bind Limiter to the Flask app
+limiter.init_app(app)
 
 # Initialize EmailParser
 email_parser = EmailParser(config_path='parser.config.yaml')
@@ -150,6 +152,33 @@ def parse_email_endpoint():
     except Exception as e:
         logger.error(f"Unexpected error in parse_email: {str(e)}", exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@app.route('/export_pdf', methods=['POST'])
+def export_pdf():
+    """Endpoint to export parsed data to PDF."""
+    data = request.get_json()
+    if not data or 'parsed_data' not in data:
+        return jsonify({'error': 'No parsed data provided'}), 400
+
+    pdf_bytes = export_to_pdf(data['parsed_data'])
+    response = make_response(pdf_bytes)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=exported_data.pdf'
+    return response
+
+@app.route('/export_csv', methods=['POST'])
+def export_csv():
+    """Endpoint to export parsed data to CSV."""
+    data = request.get_json()
+    if not data or 'parsed_data' not in data:
+        return jsonify({'error': 'No parsed data provided'}), 400
+
+    csv_string = export_to_csv(data['parsed_data'])
+    response = make_response(csv_string)
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = 'attachment; filename=exported_data.csv'
+    return response
+
 
 @app.errorhandler(404)
 def not_found_error(error):

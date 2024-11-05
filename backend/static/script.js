@@ -377,3 +377,73 @@ function initParallax() {
 
     document.addEventListener('mousemove', throttledMouseMove);
 }
+
+// Add event listeners for the export buttons
+document.addEventListener('DOMContentLoaded', () => {
+    const exportPdfButton = document.getElementById('exportPdfButton');
+    const exportCsvButton = document.getElementById('exportCsvButton');
+
+    if (exportPdfButton) {
+        exportPdfButton.addEventListener('click', exportToPdf);
+    }
+
+    if (exportCsvButton) {
+        exportCsvButton.addEventListener('click', exportToCsv);
+    }
+});
+
+// Export functions
+async function exportToPdf() {
+    if (!Elements.results) return;
+
+    const parsedData = Elements.results.textContent;
+    try {
+        const response = await fetch('/export_pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parsed_data: JSON.parse(parsedData) })
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to generate PDF");
+        }
+
+        const blob = await response.blob();
+        downloadFile(blob, 'exported_data.pdf');
+    } catch (error) {
+        console.error("PDF Export Error:", error);
+    }
+}
+
+async function exportToCsv() {
+    if (!Elements.results) return;
+
+    const parsedData = Elements.results.textContent;
+    try {
+        const response = await fetch('/export_csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parsed_data: JSON.parse(parsedData) })
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to generate CSV");
+        }
+
+        const blob = await response.blob();
+        downloadFile(blob, 'exported_data.csv');
+    } catch (error) {
+        console.error("CSV Export Error:", error);
+    }
+}
+
+function downloadFile(blob, filename) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+}
