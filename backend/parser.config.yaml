@@ -3,10 +3,12 @@ lm_studio:
   api_key: "lm-studio"
 
 prompt_template: |
-  [INST] You are a precise email parsing assistant. Extract and format the following information from the email below, matching the fields of our intake form exactly. Use only information explicitly stated in the email. Mark required fields with an asterisk (*). Use "N/A" if information is not found.
+  [INST] You are a precise email parsing assistant. Extract and format the following information from the email below, matching the fields of our intake form exactly. Use only information explicitly stated in the email. Mark required fields with an asterisk (*). Use "N/A" if information is not found. Avoid repetition and keep the response concise.
 
   Email content:
   {{email_content}}
+
+  Limit your response to 300 tokens or fewer.
 
   Format the response exactly as follows:
 
@@ -52,7 +54,7 @@ prompt_template: |
   - Permission for Third-Party Tarp Removal: 
   - Tile Matching Information (for tile roof): 
   - Roof Diagram Needed: 
-  
+      
   **OTHER**
   - Notes/Comments: 
   - Attachments: 
@@ -60,31 +62,31 @@ prompt_template: |
   Fill in each field with information from the email only. Use "N/A" if not found. [/INST]
 
 field_validation:
-  assigner_name_pattern: '^[A-Za-z\\s]+$'
-  assigner_email_pattern: '^[\\w\\.-]+@[\\w\\.-]+\\.\\w+$'
-  assigner_phone_pattern: '^\\d{3}-\\d{3}-\\d{4}$'
-  assigner_phone_extension_pattern: '^\\d+$'
-  claim_number_pattern: '^BX-\\d{8}$'
-  policy_number_pattern: '^BCR-\\d{4}-\\d{5}$'
-  date_of_loss_pattern: '^(January|February|March|April|May|June|July|August|September|October|November|December) \\d{1,2}(st|nd|rd|th)?, \\d{4}$'
-  client_company_pattern: '^[A-Za-z\\s]+$'
-  insurance_carrier_pattern: '^[A-Za-z\\s]+$'
-  insured_name_pattern: '^[A-Za-z\\s]+$'
-  insured_phone_pattern: '^\\d{3}-\\d{3}-\\d{4}$'
-  insured_email_pattern: '^[\\w\\.-]+@[\\w\\.-]+\\.\\w+$'
+  assigner_name_pattern: '^[A-Za-z\s]+$'
+  assigner_email_pattern: '^[\w\.-]+@[\w\.-]+\.\w+$'
+  assigner_phone_pattern: '^\d{3}-\d{3}-\d{4}$'
+  assigner_phone_extension_pattern: '^\d+$'
+  claim_number_pattern: '^BX-\d{8}$'
+  policy_number_pattern: '^BCR-\d{4}-\d{5}$'
+  date_of_loss_pattern: '^(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}(st|nd|rd|th)?, \d{4}$'
+  client_company_pattern: '^[A-Za-z\s]+$'
+  insurance_carrier_pattern: '^[A-Za-z\s]+$'
+  insured_name_pattern: '^[A-Za-z\s]+$'
+  insured_phone_pattern: '^\d{3}-\d{3}-\d{4}$'
+  insured_email_pattern: '^[\w\.-]+@[\w\.-]+\.\w+$'
   risk_location_pattern: '^.+$'
   cat_event_related_pattern: '^(Yes|No)$'
-  cat_event_name_pattern: '^[A-Za-z\\s]+$'
-  additional_party_name_pattern: '^[A-Za-z\\s]+$'
-  additional_party_company_pattern: '^[A-Za-z\\s]+$'
-  additional_party_phone_pattern: '^\\d{3}-\\d{3}-\\d{4}$'
-  additional_party_email_pattern: '^[\\w\\.-]+@[\\w\\.-]+\\.\\w+$'
+  cat_event_name_pattern: '^[A-Za-z\s]+$'
+  additional_party_name_pattern: '^[A-Za-z\s]+$'
+  additional_party_company_pattern: '^[A-Za-z\s]+$'
+  additional_party_phone_pattern: '^\d{3}-\d{3}-\d{4}$'
+  additional_party_email_pattern: '^[\w\.-]+@[\w\.-]+\.\w+$'
   services_needed_pattern: '^.+$'
   expert_needed_pattern: '^.+$'
   damage_type_pattern: '^.+$'
   property_inspect_pattern: '^.+$'
   budget_required_pattern: '^(Yes|No)$'
-  number_of_buildings_pattern: '^\\d+$'
+  number_of_buildings_pattern: '^\d+$'
   call_before_inspection_pattern: '^(Yes|No)$'
   call_after_inspection_pattern: '^(Yes|No)$'
   repair_recommendations_pattern: '^(Yes|No)$'
@@ -96,9 +98,9 @@ field_validation:
   attachments_pattern: '^.*$'
 
 logging:
-  level: "DEBUG"
+  level: "DEBUG"  # Can be set to INFO or ERROR in production
   file_path: "logs/parser.log"
   create_logs_dir_if_not_exists: True
 
 cache_dir: "./cache"
-max_tokens: 8024
+max_tokens: 2000  # Original: 8024, but play with it to see what the sweet spot is fr fr dawg

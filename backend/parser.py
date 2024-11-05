@@ -7,17 +7,18 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Any, Union
 from dotenv import load_dotenv
-from cachetools import LRUCache, cached, cachedmethod
+from cachetools import LRUCache, cachedmethod
 from functools import wraps
 from tenacity import retry, stop_after_attempt, wait_fixed
 from openai import OpenAI, OpenAIError
+from logging.handlers import RotatingFileHandler
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Setup basic logger
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("parser")
+logger.setLevel(logging.DEBUG)  # Initial level; will be overridden by config
 
 def performance_monitor(func):
     """Decorator to monitor performance metrics of functions."""
@@ -78,18 +79,18 @@ class EmailParser:
         if not os.path.exists(config_path):
             logger.critical(f"Configuration file not found: {config_path}")
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
-    
+
         try:
             with open(config_path, 'r') as file:
                 config_data = yaml.safe_load(file)
-    
+
             # Validate required fields, excluding 'generation_config'
             required_fields = ['prompt_template', 'logging', 'field_validation', 'lm_studio']
             for field in required_fields:
                 if field not in config_data:
                     logger.critical(f"Missing required configuration field: {field}")
                     raise KeyError(f"Missing required configuration field: {field}")
-    
+
             prompt_template = config_data['prompt_template']
             logging_config = config_data['logging']
             field_validation = config_data['field_validation']
@@ -97,7 +98,7 @@ class EmailParser:
             
             # Use an empty dictionary as the default for generation_config if not present
             generation_config = config_data.get('generation_config', {})
-    
+
             return ParserConfig(
                 prompt_template=prompt_template,
                 logging_level=logging_config.get('level', 'DEBUG'),
@@ -110,7 +111,7 @@ class EmailParser:
                 lm_studio_api_key=lm_studio_config['api_key'],
                 generation_config=generation_config  # Optional field
             )
-    
+
         except yaml.YAMLError as e:
             logger.critical(f"Error parsing configuration file: {e}")
             raise
@@ -126,7 +127,7 @@ class EmailParser:
             logger.handlers.clear()
 
         # File handler with rotation
-        file_handler = logging.handlers.RotatingFileHandler(
+        file_handler = RotatingFileHandler(
             self.config.logging_file,
             maxBytes=10*1024*1024,  # 10MB
             backupCount=5
@@ -190,9 +191,12 @@ class EmailParser:
             validated_data = self._validate_parsed_fields(parsed_data)
             return validated_data
 
+        except OpenAIError as e:
+            logger.error(f"OpenAI error during parsing: {e}", exc_info=True)
+            return "Error communicating with LM Studio."
         except Exception as e:
-            logger.error(f"Error during parsing: {e}", exc_info=True)
-            return f"Internal error during parsing: {e}"
+            logger.error(f"Unexpected error during parsing: {e}", exc_info=True)
+            return "Internal error during parsing."
 
     def _parse_response(self, response: str) -> Dict[str, Any]:
         """Parse the LM Studio response to extract fields."""
@@ -213,6 +217,10 @@ class EmailParser:
                 if len(parts) == 2:
                     key = parts[0].strip().lower().replace(' ', '_').replace('(', '').replace(')', '')
                     value = parts[1].strip()
+                    # Detect loops by checking for repeated content
+                    if key in parsed_data[current_section] and parsed_data[current_section][key] == value:
+                        logger.warning(f"Loop detected for field '{key}' with value '{value}'.")
+                        raise ValueError(f"Loop detected in parsing for field '{key}'.")
                     parsed_data[current_section][key] = value
         logger.debug(f"Parsed data: {parsed_data}")
         return parsed_data
@@ -241,5 +249,25 @@ class EmailParser:
                     # If no pattern or value is "N/A", assign the value as-is
                     validated_data[section][key] = value
 
+        # Detect repeated output patterns to prevent hallucinations
+        if self._detect_repeated_patterns(validated_data):
+            logger.warning("Repeated output patterns detected in validated data.")
+            raise ValueError("Repeated output patterns detected.")
+
         logger.debug(f"Validated data: {validated_data}")
         return validated_data
+
+    def _detect_repeated_patterns(self, data: Dict[str, Any]) -> bool:
+        """Detect if the validated data contains repeated patterns indicating potential loops."""
+        logger.debug("Checking for repeated patterns in validated data.")
+        seen = {}
+        for section, fields in data.items():
+            for key, value in fields.items():
+                if value in seen:
+                    seen[value] += 1
+                    if seen[value] > 3:  # Threshold for repetition
+                        logger.debug(f"Value '{value}' repeated {seen[value]} times.")
+                        return True
+                else:
+                    seen[value] = 1
+        return False
