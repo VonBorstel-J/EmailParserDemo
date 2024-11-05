@@ -1,0 +1,334 @@
+# ================================
+# 1. General Ignored Files
+# ================================
+
+# Operating System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+._*
+
+# Logs and temporary files
+*.log
+logs/
+*.out
+*.pid
+*.seed
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.backup
+*.orig
+*.rej
+
+# Environment variable files
+.env
+.env.*.local
+
+# ================================
+# 2. Python Backend
+# ================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+.env/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache/
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Cython debug symbols
+cython_debug/
+
+# ================================
+# 3. Node.js Frontend
+# ================================
+
+# Dependencies
+/node_modules/
+/frontend/node_modules/
+
+# Build output
+/frontend/dist/
+/frontend/build/
+/frontend/coverage/
+/frontend/lib-cov/
+/frontend/.next/
+/frontend/.nuxt/
+/frontend/out/
+/frontend/public/
+/frontend/.cache/
+.frontend/.parcel-cache/
+
+# Production files
+/frontend/bundle.js
+/frontend/bundle.js.map
+
+# Miscellaneous
+/frontend/.sass-cache/
+/frontend/connect.lock/
+/frontend/libpeerconnection.log
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/lerna-debug.log*
+/frontend/.pnpm-debug.log*
+/frontend/*.tgz
+/frontend/*.lock
+/frontend/.cache-loader/
+/frontend/.npm
+/frontend/.eslintcache
+/frontend/.vercel/
+/frontend/.vscode/
+/frontend/.idea/
+/frontend/*.sublime-project
+/frontend/*.sublime-workspace
+
+# Parcel-bundler cache
+/frontend/.cache/
+/frontend/.parcel-cache/
+
+# Next.js build output
+/frontend/.next/
+/frontend/out/
+
+# Gatsby files
+/frontend/.cache/
+/frontend/public/
+
+# Vue.js
+/frontend/dist/
+/frontend/node_modules/
+
+/frontend/ios/
+/frontend/android/
+
+# ================================
+# 4. Docker
+# ================================
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Docker image files
+*.tar
+*.tgz
+
+# Docker volumes
+docker-volumes/
+
+# ================================
+# 5. IDEs and Editors
+# ================================
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Atom
+.atom/
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Vim
+*.swp
+*.swo
+.session
+
+# ================================
+# 6. Miscellaneous
+# ================================
+
+# Backup files
+*.bak
+*.tmp
+*.temp
+*.orig
+
+# ================================
+# 7. Test Files and Scripts
+# ================================
+
+# Test emails
+/testEmails/*.txt
+
+# Scripts
+/test-docker.bat
+/download_models.py
+/exporter.py
+/app.py
+/backend/requirements.txt
+
+# ================================
+# 8. LLM Models (Large Files)
+# ================================
+
+# Ignore all large model files in backend/models/
+
+# Define file extensions for large models
+backend/models/**/*.safetensors
+backend/models/**/*.pth
+backend/models/**/*.pt
+backend/models/**/*.bin
+backend/models/**/*.ckpt
+backend/models/**/*.model
+
+# Optionally, ignore entire subdirectories known to contain large files
+backend/models/**/snapshots/
+backend/models/**/original/
+
+# Allow specific non-binary files within models (e.g., config, README)
+!backend/models/**/*.json
+!backend/models/**/*.md
+!backend/models/**/*.png
+!backend/models/**/*.pdf
+
+# ================================
+# 9. Static Assets
+# ================================
+
+# Frontend static assets (keep these files)
+!/frontend/src/styles.css
+!/frontend/src/index.js
+!/frontend/src/components/ParserForm.jsx
+!/frontend/src/components/ParsedResult.jsx
+!/frontend/src/App.jsx
+
+# Backend static assets (keep these files)
+!/backend/static/styles.css
+!/backend/static/script.js
+!/backend/static/img/*.webp
+
+# ================================
+# 10. Specific Ignore Rules Based on User Input
+# ================================
+
+# Ignore specific LLM model directories based on provided file paths
+backend/models/models--meta-llama--Llama-3.2-3B/
+backend/models/models--meta-llama--Llama-3.2-1B/
+backend/models/llama_3b/
+backend/models/llama_1b/
+
+# ================================
+# 11. Exclude Specific Files if Necessary
+# ================================
+
+# Additional large files to exclude based on your file list
+backend/models/**/*.consolidated.00.pth
+backend/models/**/*.model.safetensors
+backend/models/**/*.model.safetensors.index.json

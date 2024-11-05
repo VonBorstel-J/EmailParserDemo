@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Parser - Dark Mode</title>
+    <!-- Tailwind CSS CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div class="background-overlay"></div>
+    <div class="grid-overlay"></div>
+    <div class="parallax-stars"></div>
+    <div class="container mx-auto p-4">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-blue-400">Email Parser</h1>
+            <div class="status-container flex items-center justify-center mt-2">
+                <span class="text-sm mr-2">LM Studio Status:</span>
+                <span id="lmStatus" class="status-badge">Checking...</span>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Input Section -->
+            <section class="input-section bg-gray-800 rounded-lg p-4">
+                <h2 class="text-lg font-semibold mb-3 text-blue-400">Input Email</h2>
+                <div class="controls mb-4">
+                    <button id="loadSample" class="btn">Load Sample</button>
+                    <button id="clearBtn" class="btn">Clear</button>
+                    <span id="charCount" class="char-counter">0 characters</span>
+                </div>
+                <textarea 
+                    id="emailContent" 
+                    class="w-full min-h-[200px] max-h-[400px] bg-gray-700 text-gray-100 p-4 rounded-lg resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-base"
+                    placeholder="Paste your email content here..."
+                ></textarea>
+                <button 
+                    id="parseButton" 
+                    class="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
+                >
+                    Parse Email
+                </button>
+                <div id="progressIndicator" class="progress hidden flex items-center justify-center mt-2">
+                    <div class="spinner mr-2"></div>
+                    <span>Processing...</span>
+                </div>
+            </section>
+
+            <!-- Output Section -->
+            <section class="results-section bg-gray-800 rounded-lg p-4">
+                <h2 class="text-lg font-semibold mb-3 text-blue-400">Parsed Output</h2>
+                <div id="results" class="w-full bg-gray-700 text-gray-100 p-4 rounded-lg overflow-auto font-mono text-sm whitespace-pre-wrap">
+                    Parsed content will appear here...
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Custom Scripts -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

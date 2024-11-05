@@ -1,0 +1,98 @@
+cache_dir: "./models"
+
+logging:
+  level: "DEBUG"
+  file_path: "logs/parser.log"
+  create_logs_dir_if_not_exists: true
+
+lm_studio:
+  base_url: "http://localhost:3000"
+  api_key: "lm-studio"
+  timeout: 120
+
+models:
+  llama_1b:
+    prompt_template: |
+      [INST] You are a precise email parsing assistant. Extract and format the following information from the email below. Use only information explicitly stated in the email. Mark required fields with an asterisk (*). Use "N/A" if information is not found.
+
+      Email content:
+      {{email_content}}
+
+      Format the response exactly as follows:
+
+      **ASSIGNER INFORMATION**
+      - Name*: 
+      - Email*: 
+      - Phone*: 
+      - Extension: 
+
+      **ASSIGNMENT INFORMATION**
+      - Claim Number*: 
+      - Policy Number: 
+      - Date of Loss*: 
+      - Client Company Name*: 
+      - Insurance Carrier*: 
+      - Insured's Name*: 
+      - Insured's Phone 1*: 
+      - Insured's Phone 2: 
+      - Insured's Email: 
+      - Risk Location Address*: 
+      - CAT Event Related*: 
+      - CAT Event Name: 
+
+      **ADDITIONAL PARTY INFORMATION**
+      - Additional Party Name: 
+      - Company: 
+      - Phone: 
+      - Email: 
+
+      **DESCRIPTION OF SERVICES NEEDED**
+      - Services Needed*: 
+      - Type of Expert*: 
+      - Type of Damage*: 
+      - Areas to Inspect*: 
+
+      **QUESTIONS**
+      - Budget Required Before Proceeding*: 
+      - Number of Buildings/Units: 
+      - Call Required Before Inspection*: 
+      - Call Required After Inspection*: 
+      - Repair Recommendations Needed*: 
+      - Cost Estimate Required*: 
+      - Third-Party Tarp Removal Permission: 
+      - Tile Matching Information Needed: 
+      - Roof Diagram Needed: 
+
+      **OTHER**
+      - Notes/Comments: 
+      - Attachments: 
+
+      Fill in each field with information from the email only. Use "N/A" if not found. [/INST]
+
+    repo_id: "bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-IQ3_M.gguf"
+    model_path: "./models"
+    max_tokens: 8048
+    generation_config:
+      temperature: 0.2
+      top_p: 0.9
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      stop: ["</s>", "[/INST]"]
+
+  # Add more models here as needed
+  # example_model:
+  #   prompt_template: "Your prompt here..."
+  #   repo_id: "your/model/repo_id"
+  #   model_path: "./models"
+  #   max_tokens: 5000
+  #   generation_config:
+  #     temperature: 0.3
+  #     top_p: 0.95
+  #     frequency_penalty: 0.1
+  #     presence_penalty: 0.1
+  #     stop: ["</s>", "[END]"]
+
+field_validation:
+  phone_pattern: "^\\+?[1-9][0-9]{7,14}$"
+  email_pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+  date_pattern: "^\\d{4}-\\d{2}-\\d{2}$|^\\d{1,2}/\\d{1,2}/\\d{2,4}$"
