@@ -1,8 +1,7 @@
 # KeystoneEmailParser
 
 # ProductionDemo Backend
-
-![Logo](backend\static\img\tech-background.webp)
+<img src="backend/static/img/tech-background.webp" alt="Logo" width="200"/>
 
 ## Table of Contents
 
