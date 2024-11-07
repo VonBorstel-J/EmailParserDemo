@@ -26,7 +26,8 @@
     /* Typography */
     --font-size-small: 0.875rem; /* Previously 0.875rem for smaller text */
     --font-size-medium: 1rem; /* Adjusted if needed */
-    --line-height-normal: 1.4; /* Reduced from 1.5 */
+    --font-size-large: 1.125rem; /* Added for larger headings */
+    --line-height-normal: 1.6; /* Increased for better readability */
 }
 
 /* Animated background */
@@ -72,7 +73,7 @@ body {
     padding: calc(var(--spacing-unit) * 5);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: var(--text-light);
-    line-height: 1.5;
+    line-height: var(--line-height-normal);
 }
 
 .container {
@@ -124,11 +125,23 @@ h1:hover {
     background: linear-gradient(45deg, var(--success-color), #15803d);
     color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    animation: pulseSuccess 2s infinite;
 }
 
 .status-badge.error {
     background: linear-gradient(45deg, var(--danger-color), #b91c1c);
     color: white;
+    animation: pulseError 2s infinite;
+}
+
+@keyframes pulseSuccess {
+    0%, 100% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+}
+
+@keyframes pulseError {
+    0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.8); }
 }
 
 /* Glowing buttons */
@@ -175,30 +188,90 @@ h1:hover {
     transform: translateY(1px);
 }
 
-/* Enhanced textarea */
-#emailContent {
+/* Enhanced textarea and highlighting layer */
+.relative .highlighting {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+    color: transparent;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 1.2rem;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 1rem;
+    line-height: var(--line-height-normal);
+    overflow: hidden;
+    border-radius: var(--border-radius);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+#emailContent, #results {
+    position: relative;
     background: var(--dark-surface-2);
     color: var(--text-light);
     border: 1px solid rgba(59, 130, 246, 0.2);
     font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
     transition: all 0.3s ease;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 15px var(--accent-color);
     backdrop-filter: blur(5px);
-    min-height: 200px; /* Ensured from HTML */
-    /* Removed max-height to allow full expansion */
-    resize: vertical; /* Allow vertical resizing */
-    padding: 1rem; /* Increased padding for better readability */
-    font-size: 1rem; /* Increased font size */
-    overflow-y: auto; /* Added for smooth scrolling */
+    resize: none; 
+    padding: 1.2rem; /* Increased padding for better readability */
+    font-size: 1rem;
+    overflow: hidden; 
+    border-radius: var(--border-radius);
+    animation: breathing 4s ease-in-out infinite;
+    line-height: var(--line-height-normal); 
+    min-height: 150px; /* Further reduced min-height */
+    width: 100%; 
+    box-sizing: border-box; 
 }
 
-#emailContent:focus {
+/* Ensuring #results expands with content */
+#results {
+    max-height: none; /* Remove max-height to allow expansion */
+    overflow: visible; /* Allow expansion without scrolling */
+    padding: 1.2rem;
+    min-height: 150px; /* Lower min-height for better adaptability */
+    color: var(--text-light); /* Set to light text for parsed results */
+}
+
+/* Default text styling in results */
+.default-text {
+    color: var(--text-light-secondary);
+    font-style: italic;
+}
+
+#emailContent:focus, #results:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 20px var(--primary-glow);
+    box-shadow: 0 0 25px var(--primary-glow);
 }
 
-/* Futuristic spinner */
+/* Breathing Animation */
+@keyframes breathing {
+    0%, 100% { box-shadow: 0 0 15px var(--accent-color); }
+    50% { box-shadow: 0 0 25px var(--primary-glow); }
+}
+
+/* Syntax Highlighting Styles */
+.highlighting .keyword {
+    color: #f59e0b; /* Amber-500 */
+    font-weight: bold;
+}
+
+.highlighting .email {
+    color: #10b981; /* Green-500 */
+}
+
+.highlighting .phone {
+    color: #3b82f6; /* Blue-500 */
+}
+
+/* Loading spinner */
 @keyframes spinGlow {
     0% { transform: rotate(0deg); border-top-color: var(--primary-color); }
     50% { border-top-color: var(--accent-color); }
@@ -219,21 +292,9 @@ h1:hover {
     animation: spinGlow 1s linear infinite, glow 2s ease-in-out infinite;
 }
 
-/* Results section with scroll effects */
+/* Results section with improved readability and separation */
 #results {
-    background: var(--dark-surface-2);
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) var(--dark-surface);
-    min-height: 200px; /* Ensured from HTML */
-    padding: 1rem; /* Reduced padding */
-    font-size: 0.95rem; /* Slightly increased font size for readability */
-    line-height: 1.4; /* Optimized line height */
-    box-shadow: var(--shadow-glow); /* Added soft shadow */
+    color: var(--text-light);
 }
 
 #results::-webkit-scrollbar {
@@ -254,22 +315,69 @@ h1:hover {
     background: var(--accent-color);
 }
 
-/* Loading animation for results */
-.loading-bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 4px; /* Increased height for better visibility */
-    background: var(--primary-color);
-    animation: loadingProgress 2s ease-in-out infinite;
-    width: 100%;
-    z-index: 3; /* Ensure it overlays above other elements */
+/* Results formatting */
+.results-container {
+    font-family: 'Menlo', 'Monaco', monospace;
+    line-height: var(--line-height-normal);
+    padding: 0;
+    margin: 0;
 }
 
-@keyframes loadingProgress {
-    0% { width: 0; left: 0; }
-    50% { width: 100%; left: 0; }
-    100% { width: 0; left: 100%; }
+.result-section {
+    background-color: var(--dark-surface);
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--primary-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.result-section:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px var(--primary-glow);
+    background-color: var(--dark-surface-2);
+}
+
+.result-section h3 {
+    position: relative;
+    padding-left: 0.75rem;
+    margin-bottom: 0.25rem;
+    font-size: var(--font-size-medium);
+}
+
+.result-section h3:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 1rem;
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+.result-content {
+    padding-left: 0.75rem;
+}
+
+.result-row {
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: baseline;
+    font-size: var(--font-size-small);
+}
+
+.result-key {
+    color: var(--text-light-secondary);
+    font-weight: 500;
+    width: 160px;
+}
+
+.result-value {
+    color: var(--text-light);
+    margin-left: 0.5rem;
+    flex: 1;
 }
 
 /* Parallax Stars */
@@ -335,83 +443,6 @@ h1:hover {
     box-shadow: 0 0 20px var(--primary-glow);
 }
 
-/* Results formatting */
-.results-container {
-    font-family: 'Menlo', 'Monaco', monospace;
-    line-height: var(--line-height-normal);
-    padding: 0;
-    margin: 0;
-}
-
-.result-section {
-    background-color: var(--dark-surface);
-    padding: 0.75rem; /* Increased padding for better separation */
-    margin-bottom: 0.5rem; /* Increased margin for better separation */
-    border-radius: var(--border-radius);
-    border-left: 3px solid var(--primary-color); /* Slightly thinner border */
-}
-
-.result-section h3 {
-    position: relative;
-    padding-left: 0.75rem; /* Increased padding */
-    margin-bottom: 0.25rem; /* Maintained margin */
-    font-size: var(--font-size-medium); /* Ensures consistent sizing */
-}
-
-.result-section h3:before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px; /* Reduced from 4px */
-    height: 1rem;
-    background: var(--primary-color);
-    border-radius: 2px;
-}
-
-.result-content {
-    padding-left: 0.75rem; /* Increased padding for better separation */
-}
-
-.result-row {
-    margin-bottom: 0.25rem; /* Increased for better readability */
-    display: flex;
-    align-items: baseline;
-    font-size: var(--font-size-small); /* Slightly smaller font */
-}
-
-.result-key {
-    color: var(--text-light-secondary);
-    font-weight: 500;
-    width: 160px; /* Reduced from 180px */
-}
-
-.result-value {
-    color: var(--text-light);
-    margin-left: 0.5rem;
-    flex: 1; /* Allows the value to take up remaining space */
-}
-
-/* Optional: Adjust overall spacing in the results section */
-.results-section {
-    padding: 0.75rem; /* Reduced padding from 1rem */
-    height: auto; /* Allow height to adjust based on content */
-    max-height: 600px; /* Set a max-height with scroll */
-    overflow: auto;
-}
-
-/* Optional: Remove extra spacing in lists or other elements within results */
-.results-container ul,
-.results-container ol {
-    margin: 0;
-    padding-left: 1.25rem; /* Adjust as needed */
-}
-
-.results-container li {
-    margin-bottom: 0.15rem; /* Reduced spacing between list items */
-}
-
 /* Controls container */
 .controls {
     display: flex;
@@ -423,7 +454,7 @@ h1:hover {
 
 .controls .char-counter {
     margin-left: auto;
-    opacity: 0.7;
+    opacity: 0.9; /* Increased opacity for better visibility */
     font-size: 0.875rem;
 }
 
@@ -439,4 +470,36 @@ h1:hover {
 
 .loading-bar:not(.hidden) {
     display: block;
+}
+
+/* Export Buttons Styling */
+.export-buttons {
+    margin-top: 1rem; /* Added margin-top to separate from other elements */
+    display: flex;
+    gap: 1rem;
+}
+
+.export-buttons .btn {
+    padding: 0.6rem 1.2rem; /* Increased padding for better click area */
+    font-size: 0.875rem;
+    border: none;
+}
+
+.export-buttons .btn:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Divider lines within parsed output */
+.result-section + .result-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Slight background shading for different sections */
+.result-section:nth-child(even) {
+    background-color: var(--dark-surface);
+}
+
+.result-section:nth-child(odd) {
+    background-color: var(--dark-surface-2);
 }

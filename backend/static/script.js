@@ -1,3 +1,5 @@
+let parsedDataJson = null;
+
 // Constants
 const CONFIG = {
     LM_STUDIO_URL: 'http://localhost:3000',
@@ -44,9 +46,10 @@ P.S. Does anyone know a good place for lunch near the office? I'm getting tired 
 `
 };
 
-// DOM Elements Cache
+// DOM Elements Cache - Updated to include highlighting layer and autoresize
 const Elements = {
     get content() { return document.getElementById('emailContent'); },
+    get highlighting() { return document.getElementById('highlighting'); }, // New
     get charCount() { return document.getElementById('charCount'); },
     get parseButton() { return document.getElementById('parseButton'); },
     get progress() { return document.getElementById('progressIndicator'); },
@@ -75,6 +78,8 @@ function initializeApp() {
         loadSampleBtn.addEventListener('click', () => {
             loadSample();
             updateCharCount();
+            highlightSyntax(); // Add syntax highlighting after loading sample
+            autoResizeTextarea(Elements.content);
         });
     }
 
@@ -82,6 +87,8 @@ function initializeApp() {
         clearBtn.addEventListener('click', () => {
             clearContent();
             updateCharCount();
+            highlightSyntax(); // Clear highlighting when content is cleared
+            autoResizeTextarea(Elements.content);
         });
     }
 
@@ -91,7 +98,12 @@ function initializeApp() {
 
     // Initialize textarea events
     if (Elements.content) {
-        Elements.content.addEventListener('input', debounce(updateCharCount, 300));
+        Elements.content.addEventListener('input', debounce(() => {
+            updateCharCount();
+            highlightSyntax();
+            autoResizeTextarea(Elements.content);
+        }, 300));
+        Elements.content.addEventListener('scroll', syncScroll);
     }
 
     // Initialize parallax
@@ -113,7 +125,63 @@ function initializeApp() {
             button.style.setProperty('--y', `${y}px`);
         });
     });
+
+    // Initial syntax highlighting and auto-resize
+    highlightSyntax();
+    autoResizeTextarea(Elements.content);
 }
+
+// Synchronize scrolling between textarea and highlighting layer
+function syncScroll() {
+    if (Elements.highlighting && Elements.content) {
+        Elements.highlighting.scrollTop = Elements.content.scrollTop;
+        Elements.highlighting.scrollLeft = Elements.content.scrollLeft;
+    }
+}
+
+// Syntax Highlighting Function
+function highlightSyntax() {
+    if (!Elements.highlighting || !Elements.content) return;
+
+    const text = Elements.content.value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Define regex patterns
+    const patterns = [
+        { regex: /(Subject:|To:|CC:|BCC:)/g, cls: 'keyword' },
+        { regex: /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, cls: 'email' },
+        { regex: /(\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b)/g, cls: 'phone' },
+    ];
+
+    let highlighted = text;
+
+    patterns.forEach(pattern => {
+        highlighted = highlighted.replace(pattern.regex, `<span class="${pattern.cls}">$1</span>`);
+    });
+
+    Elements.highlighting.innerHTML = highlighted + '<br />'; // Add a line break to prevent textarea height issues
+}
+
+// Auto-Resize Textarea Function
+function autoResizeTextarea(textarea) {
+    if (!textarea) return;
+    textarea.style.height = 'auto'; // Reset height
+    textarea.style.height = textarea.scrollHeight + 'px'; // Set to scrollHeight
+    // Similarly, adjust the highlighting layer height
+    if (Elements.highlighting) {
+        Elements.highlighting.style.height = `${textarea.scrollHeight}px`;
+    }
+}
+
+// Ensure the highlighting is updated on initial load
+document.addEventListener('DOMContentLoaded', () => {
+    if (Elements.content) {
+        highlightSyntax();
+        autoResizeTextarea(Elements.content);
+    }
+});
 
 // LM Studio Status Management
 function startStatusCheckInterval() {
@@ -144,7 +212,7 @@ function updateStatusUI(status) {
         'error': { text: 'Disconnected', class: 'error' }
     };
 
-    const { text, class: className } = statusMap[status];
+    const { text, class: className } = statusMap[status] || { text: 'Unknown', class: 'error' };
     Elements.lmStatus.textContent = text;
     Elements.lmStatus.className = `status-badge ${className}`;
 }
@@ -161,6 +229,9 @@ function clearContent() {
     if (!Elements.content) return;
 
     Elements.content.value = '';
+    if (Elements.highlighting) {
+        Elements.highlighting.innerHTML = '<br />';
+    }
     clearResults();
     updateCharCount();
 }
@@ -169,7 +240,11 @@ function loadSample() {
     if (!Elements.content) return;
 
     Elements.content.value = CONFIG.SAMPLE_EMAIL;
+    if (Elements.highlighting) {
+        highlightSyntax();
+    }
     updateCharCount();
+    autoResizeTextarea(Elements.content);
 }
 
 // Email Parsing
@@ -189,7 +264,7 @@ async function parseEmail() {
 }
 
 function validateInput() {
-    if (!Elements.content || !Elements.content.value.trim()) {
+    if (!Elements.content?.value.trim()) {
         showError("Please enter email content!");
         return false;
     }
@@ -213,6 +288,7 @@ async function fetchParseResults() {
 
 function handleParseResponse(data) {
     if (data.result) {
+        parsedDataJson = data.result; 
         showResults(data.result);
     } else if (data.error) {
         showError(data.error);
@@ -244,7 +320,7 @@ function setParsingState(isParsing) {
 // Results Display
 function clearResults() {
     if (Elements.results) {
-        Elements.results.innerHTML = '';
+        Elements.results.innerHTML = '<span class="default-text">Parsed content will appear here...</span>';
     }
 }
 
@@ -394,46 +470,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export functions
 async function exportToPdf() {
-    if (!Elements.results) return;
+    if (!parsedDataJson) {
+        showError("No parsed data available for export.");
+        return;
+    }
 
-    const parsedData = Elements.results.textContent;
     try {
         const response = await fetch('/export_pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ parsed_data: JSON.parse(parsedData) })
+            body: JSON.stringify({ parsed_data: parsedDataJson })
         });
 
-        if (!response.ok) {
-            throw new Error("Failed to generate PDF");
-        }
+        if (!response.ok) throw new Error("Failed to generate PDF");
 
         const blob = await response.blob();
         downloadFile(blob, 'exported_data.pdf');
     } catch (error) {
         console.error("PDF Export Error:", error);
+        showError("Failed to export PDF");
     }
 }
 
 async function exportToCsv() {
-    if (!Elements.results) return;
+    if (!parsedDataJson) {
+        showError("No parsed data available for export.");
+        return;
+    }
 
-    const parsedData = Elements.results.textContent;
     try {
         const response = await fetch('/export_csv', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ parsed_data: JSON.parse(parsedData) })
+            body: JSON.stringify({ parsed_data: parsedDataJson })
         });
 
-        if (!response.ok) {
-            throw new Error("Failed to generate CSV");
-        }
+        if (!response.ok) throw new Error("Failed to generate CSV");
 
         const blob = await response.blob();
         downloadFile(blob, 'exported_data.csv');
     } catch (error) {
         console.error("CSV Export Error:", error);
+        showError("Failed to export CSV");
     }
 }
 
@@ -445,5 +523,6 @@ function downloadFile(blob, filename) {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    window.URL.revokeObjectURL(url);
+
+    setTimeout(() => window.URL.revokeObjectURL(url), 100);
 }

@@ -24,38 +24,41 @@
 
         <main class="flex flex-col lg:flex-row gap-6">
             <!-- Input Section -->
-            <section class="input-section bg-gray-800 rounded-lg p-4 flex-1">
+            <section class="input-section bg-gray-800 rounded-lg p-4 flex-1 relative">
                 <h2 class="text-lg font-semibold mb-3 text-blue-400">Input Email</h2>
                 <div class="controls mb-4">
                     <button id="loadSample" class="btn">Load Sample</button>
                     <button id="clearBtn" class="btn">Clear</button>
                     <span id="charCount" class="char-counter">0 characters</span>
                 </div>
-                <textarea 
-                    id="emailContent" 
-                    class="w-full min-h-[200px] bg-gray-700 text-gray-100 p-4 rounded-lg resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-base overflow-y-auto"
-                    placeholder="beep BOOP beep GIMMIE TXT..."
-                ></textarea>
+                <div class="relative">
+                    <!-- Syntax Highlighting Layer -->
+                    <pre id="highlighting" class="highlighting"></pre>
+                    <!-- Actual Textarea -->
+                    <textarea 
+                        id="emailContent" 
+                        class="w-full bg-transparent text-transparent caret-white p-4 rounded-lg resize-none focus:outline-none font-mono text-base overflow-hidden relative z-10"
+                        placeholder="beep BOOP beep GIMMIE TXT..."
+                        data-autoresize
+                    ></textarea>
+                </div>
                 <button 
                     id="parseButton" 
-                    class="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
+                    class="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors relative z-10"
                 >
                     Parse Email
                 </button>
-                <div id="progressIndicator" class="progress hidden flex items-center justify-center mt-2">
+                <div id="progressIndicator" class="progress hidden flex items-center justify-center mt-2 relative z-10">
                     <div class="spinner mr-2"></div>
                     <span>Processing...</span>
                 </div>
-                <!-- Moved loading-bar outside for better visibility -->
+                <!-- Loading Bar -->
                 <div class="loading-bar hidden"></div>
             </section>
 
             <!-- Output Section -->
             <section class="results-section bg-gray-800 rounded-lg p-4 flex-grow">
                 <h2 class="text-lg font-semibold mb-3 text-blue-400">Parsed Output</h2>
-                <div id="results" class="w-full bg-gray-700 text-gray-100 p-4 rounded-lg overflow-auto font-mono text-sm whitespace-pre-wrap">
-                    Parsed content will appear here...
-                </div>
                 <div class="export-buttons flex gap-4 mt-4">
                     <button id="exportPdfButton" class="btn bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg">
                         Export to PDF
@@ -64,6 +67,10 @@
                         Export to CSV
                     </button>
                 </div>
+                <div id="results" class="w-full bg-gray-700 text-gray-100 p-4 rounded-lg overflow-auto font-mono text-sm whitespace-pre-wrap">
+                    <span class="default-text">Parsed content will appear here...</span>
+                </div>
+                
             </section>
         </main>
     </div>
