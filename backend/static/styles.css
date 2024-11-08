@@ -1,3 +1,5 @@
+/* styles.css */
+
 :root {
     /* Core theme colors */
     --primary-color: #3b82f6;
@@ -28,6 +30,9 @@
     --font-size-medium: 1rem; /* Adjusted if needed */
     --font-size-large: 1.125rem; /* Added for larger headings */
     --line-height-normal: 1.6; /* Increased for better readability */
+    
+    /* Notification Animations */
+    --notification-duration: 0.3s;
 }
 
 /* Animated background */
@@ -58,6 +63,7 @@
     z-index: 1;
 }
 
+/* Adjust body for full-height layout */
 body {
     background: linear-gradient(
         135deg,
@@ -74,21 +80,28 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: var(--text-light);
     line-height: var(--line-height-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 .container {
     position: relative;
-    max-width: 1400px;
-    margin: 0 auto;
+    width: 95vw;
+    max-width: 98vw; /* Increased from 1400px to use more screen space */
+    margin: 2rem auto;
     z-index: 2;
     backdrop-filter: blur(10px);
     background: rgba(30, 41, 59, 0.7);
     border: 1px solid rgba(59, 130, 246, 0.2);
     box-shadow: var(--shadow-md);
-    max-height: 90vh; /* Ensures container fits within viewport */
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    padding: 2rem;
+    min-height: min-content; /* Allow container to shrink */
+    max-height: none; /* Remove max-height constraint */
+    border-radius: var(--border-radius);
 }
 
 /* Header with glow effect */
@@ -157,6 +170,7 @@ h1:hover {
     border: 1px solid rgba(59, 130, 246, 0.2);
     position: relative;
     overflow: hidden;
+    z-index: 3;
 }
 
 .btn:before {
@@ -188,13 +202,54 @@ h1:hover {
     transform: translateY(1px);
 }
 
+/* Main content area */
+main {
+    display: flex;
+    gap: 2rem;
+    width: 100%;
+    min-height: 0;
+}
+
+.input-section,
+.results-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0; /* Prevents flex items from overflowing */
+    background: var(--dark-surface-2);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Controls stay at top */
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    background: var(--dark-surface);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    z-index: 10;
+}
+
 /* Enhanced textarea and highlighting layer */
-.relative .highlighting {
+.relative {
+    position: relative;
+    width: 100%;
+}
+
+.highlighting {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: auto;
+    height: 100%;
     pointer-events: none;
     color: transparent;
     white-space: pre-wrap;
@@ -205,11 +260,11 @@ h1:hover {
     line-height: var(--line-height-normal);
     overflow: hidden;
     border-radius: var(--border-radius);
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    z-index: 1;
+    background: transparent;
 }
 
-#emailContent, #results {
+#emailContent {
     position: relative;
     background: var(--dark-surface-2);
     color: var(--text-light);
@@ -218,25 +273,38 @@ h1:hover {
     transition: all 0.3s ease;
     box-shadow: 0 0 15px var(--accent-color);
     backdrop-filter: blur(5px);
-    resize: none; 
-    padding: 1.2rem; /* Increased padding for better readability */
+    resize: none; /* Disable manual resize since we're auto-growing */
+    padding: 1.2rem;
     font-size: 1rem;
-    overflow: hidden; 
+    line-height: var(--line-height-normal);
     border-radius: var(--border-radius);
     animation: breathing 4s ease-in-out infinite;
-    line-height: var(--line-height-normal); 
-    min-height: 150px; /* Further reduced min-height */
-    width: 100%; 
-    box-sizing: border-box; 
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden; /* Hide scrollbars since we're auto-growing */
+    min-height: 150px; /* Minimum height */
+    z-index: 2;
 }
 
-/* Ensuring #results expands with content */
 #results {
-    max-height: none; /* Remove max-height to allow expansion */
-    overflow: visible; /* Allow expansion without scrolling */
+    position: relative;
+    background: var(--dark-surface-2);
+    color: var(--text-light);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px var(--accent-color);
+    backdrop-filter: blur(5px);
     padding: 1.2rem;
-    min-height: 150px; /* Lower min-height for better adaptability */
-    color: var(--text-light); /* Set to light text for parsed results */
+    font-size: 1rem;
+    line-height: var(--line-height-normal);
+    border-radius: var(--border-radius);
+    animation: breathing 4s ease-in-out infinite;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden; /* Hide scrollbars since we're auto-growing */
+    min-height: 150px; /* Minimum height */
+    z-index: 2;
 }
 
 /* Default text styling in results */
@@ -245,7 +313,8 @@ h1:hover {
     font-style: italic;
 }
 
-#emailContent:focus, #results:focus {
+#emailContent:focus,
+#results:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 25px var(--primary-glow);
@@ -292,29 +361,6 @@ h1:hover {
     animation: spinGlow 1s linear infinite, glow 2s ease-in-out infinite;
 }
 
-/* Results section with improved readability and separation */
-#results {
-    color: var(--text-light);
-}
-
-#results::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-#results::-webkit-scrollbar-track {
-    background: var(--dark-surface);
-}
-
-#results::-webkit-scrollbar-thumb {
-    background: var(--primary-color);
-    border-radius: 4px;
-}
-
-#results::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-color);
-}
-
 /* Results formatting */
 .results-container {
     font-family: 'Menlo', 'Monaco', monospace;
@@ -330,6 +376,8 @@ h1:hover {
     border-radius: var(--border-radius);
     border-left: 3px solid var(--primary-color);
     transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .result-section:hover {
@@ -423,53 +471,56 @@ h1:hover {
     main {
         display: flex;
         gap: 1.5rem;
+        flex: 1;
     }
     .input-section, .results-section {
         flex: 1;
+        max-width: 50%;
     }
 }
 
-/* Section transitions */
-.input-section,
-.results-section {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative;
-    overflow: hidden;
+/* Responsive layout adjustments */
+@media (max-width: 1024px) {
+    body {
+        align-items: flex-start; /* Better for long content */
+        padding: calc(var(--spacing-unit) * 2);
+    }
+
+    .container {
+        margin: 1rem 0; /* Reduce margins on mobile */
+        width: 100%;
+        padding: 1rem;
+    }
+
+    main {
+        flex-direction: column;
+        gap: 1rem; /* Reduce gap on mobile */
+    }
+
+    .input-section,
+    .results-section {
+        width: 100%;
+        max-width: none; /* Remove max-width constraint on mobile */
+    }
+
+    /* Make controls more compact on mobile */
+    .controls {
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+
+    /* Adjust button sizes for mobile */
+    .btn {
+        padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 3);
+    }
 }
 
-.input-section:hover,
-.results-section:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 20px var(--primary-glow);
-}
-
-/* Controls container */
-.controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-}
-
-.controls .char-counter {
-    margin-left: auto;
-    opacity: 0.9; /* Increased opacity for better visibility */
-    font-size: 0.875rem;
-}
-
-/* Hide progress indicator by default */
-.progress.hidden {
-    display: none;
-}
-
-/* Show loading-bar when active */
-.loading-bar.hidden {
-    display: none;
-}
-
-.loading-bar:not(.hidden) {
-    display: block;
+/* Remove unnecessary hover transform on mobile */
+@media (max-width: 768px) {
+    .input-section:hover,
+    .results-section:hover {
+        transform: none;
+    }
 }
 
 /* Export Buttons Styling */
@@ -477,12 +528,15 @@ h1:hover {
     margin-top: 1rem; /* Added margin-top to separate from other elements */
     display: flex;
     gap: 1rem;
+    position: relative;
+    z-index: 3;
 }
 
 .export-buttons .btn {
     padding: 0.6rem 1.2rem; /* Increased padding for better click area */
     font-size: 0.875rem;
     border: none;
+    transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
 .export-buttons .btn:hover {
@@ -503,3 +557,69 @@ h1:hover {
 .result-section:nth-child(odd) {
     background-color: var(--dark-surface-2);
 }
+
+/* Notification Styles */
+.notification {
+    background: var(--dark-surface-2);
+    border-left: 4px solid;
+    animation: slideIn var(--notification-duration) ease-out;
+    max-width: 300px;
+    margin-bottom: 0.5rem;
+    opacity: 0.95;
+    padding: 0.75rem 1rem;
+    border-radius: 0.25rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.notification.success {
+    border-color: var(--success-color);
+    color: var(--text-light);
+}
+
+.notification.error {
+    border-color: var(--danger-color);
+    color: var(--text-light);
+}
+
+.notification.info {
+    border-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.notification.hiding {
+    animation: fadeOut var(--notification-duration) ease-out forwards;
+}
+
+/* Hide scrollbar for Webkit browsers */
+#emailContent::-webkit-scrollbar,
+#results::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+/* Firefox scrollbar styling */
+#emailContent,
+#results {
+    scrollbar-width: none; /* Firefox */
+}
+
