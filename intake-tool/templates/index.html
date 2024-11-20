@@ -24,7 +24,7 @@
 
         <main class="flex flex-col lg:flex-row gap-6">
             <!-- Input Section -->
-            <section class="input-section bg-gray-800 rounded-lg p-4 flex-1 relative">
+            <section class="input-section bg-gray-800 rounded-lg p-4 flex-1 relative scroll-perf-container">
                 <h2 class="text-lg font-semibold mb-3 text-blue-400">Input Email</h2>
                 <div class="controls mb-4">
                     <button id="loadSample" class="btn">Load Sample</button>
@@ -40,6 +40,9 @@
                         class="w-full bg-transparent text-transparent caret-white p-4 rounded-lg resize-none focus:outline-none font-mono text-base overflow-hidden relative z-10"
                         placeholder="beep BOOP beep GIMMIE TXT..."
                         data-autoresize
+                        aria-label="Email Content"
+                        role="textbox"
+                        tabindex="0"
                     ></textarea>
                 </div>
                 <button 
@@ -57,7 +60,7 @@
             </section>
 
             <!-- Output Section -->
-            <section class="results-section bg-gray-800 rounded-lg p-4 flex-grow">
+            <section class="results-section bg-gray-800 rounded-lg p-4 flex-grow scroll-perf-container">
                 <h2 class="text-lg font-semibold mb-3 text-blue-400">Parsed Output</h2>
                 <div class="export-buttons flex gap-4 mt-4">
                     <button id="exportPdfButton" class="btn bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg">

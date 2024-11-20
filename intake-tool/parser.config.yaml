@@ -1,0 +1,249 @@
+# parser.config.yaml
+
+# =============================================================================
+# AI Configuration
+# =============================================================================
+ai:
+  generative_ai:
+    provider: "google"  # Options: "google", "vertex_ai"
+    google:
+      endpoint: "https://generativeai.googleapis.com"  # API endpoint for Google Generative AI
+      api_key: "YOUR_GOOGLE_API_KEY"  # API key for Google Generative AI (to be loaded securely via Secret Manager or environment variables)
+      max_tokens: 2000  # Maximum number of tokens for AI responses
+
+    vertex_ai:
+      model_name: "projects/your-project/locations/us-central1/models/your-model-id"  # Vertex AI model identifier
+      max_tokens: 2500  # Maximum number of tokens for Vertex AI responses
+
+  vertex_ai:
+    endpoint: "projects/your-project/locations/us-central1/endpoints/your-endpoint-id"  # Vertex AI endpoint
+    location: "us-central1"  # GCP region for Vertex AI
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+logging:
+  level: "DEBUG"  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file_path: "logs/app.log"  # Path to the application log file
+  create_logs_dir_if_not_exists: true  # Automatically create the logs directory if it doesn't exist
+
+# =============================================================================
+# Batch Processing Settings
+# =============================================================================
+batch_processing:
+  enabled: true  # Enable or disable batch processing
+  batch_size: 20  # Number of emails to process in a single batch
+
+# =============================================================================
+# Dynamic Token Adjustment Settings
+# =============================================================================
+dynamic_token_adjustment:
+  enabled: true  # Enable or disable dynamic token limit adjustments
+  max_tokens_threshold: 2500  # Maximum tokens allowed after dynamic adjustment
+
+# =============================================================================
+# Caching Configuration
+# =============================================================================
+caching:
+  enabled: true  # Enable or disable caching
+  ttl: 7200  # Time-to-live for cache entries in seconds
+  dir: "./cache"  # Directory path for cache storage
+
+# =============================================================================
+# Health Check Settings
+# =============================================================================
+health_checks:
+  enable_vertex_ai_latency: true  # Enable Vertex AI latency monitoring
+  enable_vertex_ai_quota: true  # Enable Vertex AI quota monitoring
+  enable_vertex_ai_resource_usage: true  # Enable Vertex AI resource usage monitoring
+  enable_secret_manager: true  # Enable Secret Manager connectivity checks
+  enable_cloud_storage: true  # Enable Cloud Storage connectivity checks
+
+# =============================================================================
+# Application Settings
+# =============================================================================
+app:
+  cors:
+    production:
+      allowed_origins:
+        - "https://*.cloud.run"  # Allowed origins in production environment
+    development:
+      allowed_origins:
+        - "http://localhost:5000"  # Allowed origins in development environment
+        - "http://127.0.0.1:5000"  # Additional allowed origins
+  rate_limit:
+    default: "100 per hour"  # Default rate limit for all endpoints
+    parse_email: "10 per minute"  # Specific rate limit for the parse_email endpoint
+
+# =============================================================================
+# Parser Settings
+# =============================================================================
+parser:
+  prompt_template: |
+    [INST] You are a precise email parsing assistant. Extract and format the following information from the email below, matching the fields of our intake form exactly. Use only information explicitly stated in the email. Mark required fields with an asterisk (*). Use "N/A" if information is not found. Avoid repetition and keep the response concise.
+
+    Email content:
+    {{email_content}}
+
+    Limit your response to 300 tokens or fewer.
+
+    Format the response exactly as follows:
+
+    **ASSIGNER INFORMATION**
+    - Assigner Name*: 
+    - Assigner Email*: 
+    - Assigner Phone*: 
+    - Assigner Phone Extension: 
+
+    **ASSIGNMENT INFORMATION**
+    - Claim Number*: 
+    - Policy Number: 
+    - Date of Loss*: 
+    - Client (Assigner's Company)*: 
+    - Insurance Carrier*: 
+    - Insured's Name*: 
+    - Insured's Phone Number 1*: 
+    - Insured's Phone Number 2: 
+    - Insured's Email: 
+    - Address of Risk Location*: 
+    - Is this related to a CAT event?*:
+    - CAT Event Name: 
+
+    **ADDITIONAL PARTY INFORMATION**
+    - Additional Party Name: 
+    - Additional Party Company: 
+    - Additional Party Phone: 
+    - Additional Party Email: 
+
+    **DESCRIPTION OF SERVICES NEEDED**
+    - Describe the services needed*: 
+    - Type of Expert Needed*: 
+    - Type of Damage*: 
+    - Areas of Property to Inspect*: 
+
+    **QUESTIONS TO HELP US SPEED UP ASSIGNMENT PROCESSING**
+    - Is a budget required before proceeding?*:
+    - Number of Buildings/Units (if commercial): 
+    - Call Required Before Inspection: 
+    - Call Required After Inspection: 
+    - Repair Recommendations Needed: 
+    - Cost Estimate Required: 
+    - Permission for Third-Party Tarp Removal: 
+    - Tile Matching Information (for tile roof): 
+    - Roof Diagram Needed: 
+        
+    **OTHER**
+    - Notes/Comments: 
+    - Attachments: 
+
+    Fill in each field with information from the email only. Use "N/A" if not found. [/INST]
+
+  field_validation:
+    assigner_name_pattern: '^[A-Za-z\s]+$'  # Regex pattern for assigner name
+    assigner_email_pattern: '^[\w\.-]+@[\w\.-]+\.\w+$'  # Regex pattern for assigner email
+    assigner_phone_pattern: '^\d{3}-\d{3}-\d{4}$'  # Regex pattern for assigner phone
+    assigner_phone_extension_pattern: '^\d+$'  # Regex pattern for assigner phone extension
+    claim_number_pattern: '^BX-\d{8}$'  # Regex pattern for claim number
+    policy_number_pattern: '^BCR-\d{4}-\d{5}$'  # Regex pattern for policy number
+    date_of_loss_pattern: '^(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}(st|nd|rd|th)?, \d{4}$'  # Regex pattern for date of loss
+    client_company_pattern: '^[A-Za-z\s]+$'  # Regex pattern for client company
+    insurance_carrier_pattern: '^[A-Za-z\s]+$'  # Regex pattern for insurance carrier
+    insured_name_pattern: '^[A-Za-z\s]+$'  # Regex pattern for insured name
+    insured_phone_pattern: '^\d{3}-\d{3}-\d{4}$'  # Regex pattern for insured phone
+    insured_email_pattern: '^[\w\.-]+@[\w\.-]+\.\w+$'  # Regex pattern for insured email
+    risk_location_pattern: '^.+$'  # Regex pattern for risk location
+    cat_event_related_pattern: '^(Yes|No)$'  # Regex pattern for CAT event relation
+    cat_event_name_pattern: '^[A-Za-z\s]+$'  # Regex pattern for CAT event name
+    additional_party_name_pattern: '^[A-Za-z\s]+$'  # Regex pattern for additional party name
+    additional_party_company_pattern: '^[A-Za-z\s]+$'  # Regex pattern for additional party company
+    additional_party_phone_pattern: '^\d{3}-\d{3}-\d{4}$'  # Regex pattern for additional party phone
+    additional_party_email_pattern: '^[\w\.-]+@[\w\.-]+\.\w+$'  # Regex pattern for additional party email
+    services_needed_pattern: '^.+$'  # Regex pattern for services needed
+    expert_needed_pattern: '^.+$'  # Regex pattern for type of expert needed
+    damage_type_pattern: '^.+$'  # Regex pattern for type of damage
+    property_inspect_pattern: '^.+$'  # Regex pattern for areas of property to inspect
+    budget_required_pattern: '^(Yes|No)$'  # Regex pattern for budget required
+    number_of_buildings_pattern: '^\d+$'  # Regex pattern for number of buildings/units
+    call_before_inspection_pattern: '^(Yes|No)$'  # Regex pattern for call before inspection
+    call_after_inspection_pattern: '^(Yes|No)$'  # Regex pattern for call after inspection
+    repair_recommendations_pattern: '^(Yes|No)$'  # Regex pattern for repair recommendations
+    cost_estimate_pattern: '^(Yes|No)$'  # Regex pattern for cost estimate
+    permission_tarp_removal_pattern: '^(Yes|No)$'  # Regex pattern for permission for tarp removal
+    tile_matching_pattern: '^.+$'  # Regex pattern for tile matching information
+    roof_diagram_pattern: '^(Yes|No)$'  # Regex pattern for roof diagram needed
+    notes_comments_pattern: '^.*$'  # Regex pattern for notes/comments
+    attachments_pattern: '^.*$'  # Regex pattern for attachments
+
+  concurrency_limit: 10  # Maximum number of concurrent parsing tasks (adjust based on system capacity)
+
+  logging:
+    level: "DEBUG"  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    file_path: "logs/parser.log"  # Path to the parser log file
+    create_logs_dir_if_not_exists: true  # Automatically create the logs directory if it doesn't exist
+
+  cache:
+    dir: "./cache"  # Directory path for cache storage
+    ttl: 7200  # Time-to-live for cache entries in seconds
+
+  max_tokens: 2000  # Default maximum tokens for AI responses
+
+  dynamic_token_adjustment:
+    enabled: true  # Enable or disable dynamic token limit adjustments
+    max_tokens_threshold: 2500  # Maximum tokens allowed after dynamic adjustment
+
+  batch_processing:
+    batch_size: 20  # Number of emails to process in a batch
+
+  environment_specific:
+    development:
+      vertex_ai_endpoint: "projects/dev-project/locations/us-central1/endpoints/dev-endpoint-id"  # Development Vertex AI endpoint
+      strict_mode: false  # Disable strict mode in development
+      batch_processing:
+        enabled: true  # Enable batch processing in development
+        batch_size: 10  # Smaller batch size for development
+    production:
+      vertex_ai_endpoint: "projects/prod-project/locations/us-central1/endpoints/prod-endpoint-id"  # Production Vertex AI endpoint
+      strict_mode: true  # Enable strict mode in production
+      batch_processing:
+        enabled: true  # Enable batch processing in production
+        batch_size: 20  # Standard batch size for production
+
+  strict_mode: true  # Toggle between strict and lenient parsing/validation (overridden by environment_specific if present)
+
+# =============================================================================
+# Placeholders for Future Extensions
+# =============================================================================
+extensions:
+  email_smtp:
+    host: "smtp.example.com"  # SMTP server host
+    port: 587  # SMTP server port
+    username: "user@example.com"  # SMTP username
+    password: "YOUR_SMTP_PASSWORD"  # SMTP password (to be loaded securely via Secret Manager or environment variables)
+
+# =============================================================================
+# Secrets and Sensitive Information
+# =============================================================================
+secrets:
+  # Instructions:
+  # - Store sensitive information such as API keys and passwords in GCP Secret Manager or environment variables.
+  # - Reference them here by their Secret Manager paths or environment variable names.
+  
+  google_api_key: "projects/your-project/secrets/google_api_key/versions/latest"  # Secret Manager path for Google API key
+  vertex_ai_api_key: "projects/your-project/secrets/vertex_ai_api_key/versions/latest"  # Secret Manager path for Vertex AI API key
+  smtp_password: "projects/your-project/secrets/smtp_password/versions/latest"  # Secret Manager path for SMTP password
+
+# =============================================================================
+# Dynamic Settings
+# =============================================================================
+dynamic_settings:
+  enable_debug_mode: false  # Enable or disable debug mode dynamically
+
+# =============================================================================
+# Additional Notes
+# =============================================================================
+# - Ensure that all API keys and sensitive information are stored securely using GCP Secret Manager or environment variables.
+# - Avoid hardcoding sensitive information directly in this file.
+# - The 'extensions' section is reserved for future configurations like SMTP settings.
+# - Adjust the 'concurrency_limit' based on your system's capacity and expected load.
+# - Health check toggles allow enabling or disabling specific health monitoring features per environment.
+# - Environment-specific settings allow different configurations for development and production environments.
